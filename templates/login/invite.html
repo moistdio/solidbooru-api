@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="h-100 d-flex justify-content-center align-items-center">
+<form method="POST" action="{{url_for('user_bp.invite')}}">
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="alert alert-warning">
+        {{ messages[0] }}
+    </div>
+    {% endif %}
+    {% endwith %}
+  <div class="p-3 mb-5 bg-white rounded">
+    <h1 class="display-4">Invite Codes:</h1>
+    <ul class="list-group mb-3">
+      {% for code in codes %}
+        <li class="list-group-item">{{code.code}}</li>
+      {% endfor %}
+    </ul>
+      <input class="btn btn-primary" type="submit" name="linvite" value="Generate">
+  </form>
+</div>
+
+{% endblock %}
