@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, url_for, redirect, flash
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from utils.gen import randomstr
+from utils.general import pageresult
 from db.models.user import User, Invite
 from database import db
 
@@ -18,7 +19,15 @@ def home():
 @user_bp.route('/invite', methods=['GET'])
 @login_required
 def invite():
+    page = request.args.get('page', default=1, type = int)
+
     codes_list = Invite.query.filter_by(status=False)
+
+    codes_list = pageresult(codes_list, page)
+
+    if codes_list is None:
+        flash("Error parsing Codes. Please try it out later.")
+        return redirect(url_for("user_bp.invite"))
 
     return render_template("login/invite.html", codes=codes_list)
 
