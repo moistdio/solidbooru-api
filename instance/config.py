@@ -1,4 +1,4 @@
-IP = "127.0.0.1"
+IP = "0.0.0.0"
 PORT = "5000"
 DOMAIN = "http://127.0.0.1:5000/"
 SECRET_KEY = "dasfdasfasdfa"
