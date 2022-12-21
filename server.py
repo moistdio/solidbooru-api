@@ -7,7 +7,7 @@ def main():
     app = create_app()
     create_database(app)
     create_loginmanager(app)
-    app.run(host=app.config['IP'], port=app.config['PORT'])
+    app.run(host=app.config['IP'], port=app.config['PORT'], debug=True)
 
 
 if __name__ == "__main__":
