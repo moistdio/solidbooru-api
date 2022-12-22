@@ -21,7 +21,7 @@ def home():
 def invite():
     page = request.args.get('page', default=1, type = int)
 
-    codes_list = Invite.query.filter_by(status=False)
+    codes_list = Invite.query.filter_by(status=False).order_by(Invite.id.desc())
 
     codes_list = pageresult(codes_list, page)
 
