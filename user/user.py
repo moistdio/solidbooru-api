@@ -3,7 +3,7 @@ from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from utils.gen import randomstr
 from utils.general import pageresult
-from db.models.user import User, Invite
+from db.models.models import User, Invite
 from database import db
 
 
