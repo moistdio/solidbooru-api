@@ -17,6 +17,16 @@ class Invite(db.Model):
     code = db.Column(db.String(10), unique=True)
     status = db.Column(db.Boolean, default=False)
 
+class Rank(db.Model):
+    __tablename__ = 'rank'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(20), unique=True)
+
+class Migration(db.Model):
+    __tablename__ = 'migration'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(20), unique=True)
+
 
 @login_manager.user_loader
 def load_user(id):
