@@ -3,6 +3,7 @@ from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from utils.gen import randomstr
 from utils.general import pageresult
+from utils.permission import check_member
 from db.models.models import User, Invite
 from database import db
 
@@ -12,6 +13,7 @@ user_bp = Blueprint('user_bp', __name__)
 
 @user_bp.route('/', methods=['GET'])
 @login_required
+@check_member
 def home():
     return render_template("home.html")
 
@@ -96,7 +98,7 @@ def register_post():
 
         code_check.status = True
 
-    new_user = User(name=name, password=generate_password_hash(password, method='sha256'))
+    new_user = User(name=name, password=generate_password_hash(password, method='sha256'), rank_id=1)
 
     db.session.add(new_user)
     db.session.commit()

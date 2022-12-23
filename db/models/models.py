@@ -9,6 +9,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(100), unique=True)
     password = db.Column(db.String(100))
     name = db.Column(db.String(1000))
+    rank_id = db.Column(db.Integer, db.ForeignKey('rank.id'))
 
 
 class Invite(db.Model):
@@ -21,6 +22,7 @@ class Rank(db.Model):
     __tablename__ = 'rank'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(20), unique=True)
+    rank = db.relationship('User', backref='rank', uselist=False)
 
 class Migration(db.Model):
     __tablename__ = 'migration'
