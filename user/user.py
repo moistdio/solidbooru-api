@@ -26,8 +26,8 @@ def invite():
     codes_list = pageresult(codes_list, page)
 
     if codes_list is None:
-        flash("Error parsing Codes. Please try it out later.")
-        return redirect(url_for("user_bp.invite"))
+        flash("Page is empty, try again later.")
+        return render_template("login/invite.html", codes=[], page_num=page)
 
     return render_template("login/invite.html", codes=codes_list, page_num=page)
 
