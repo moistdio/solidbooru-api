@@ -29,7 +29,7 @@ def invite():
         flash("Error parsing Codes. Please try it out later.")
         return redirect(url_for("user_bp.invite"))
 
-    return render_template("login/invite.html", codes=codes_list)
+    return render_template("login/invite.html", codes=codes_list, page_num=page)
 
 
 @user_bp.route('/invite', methods=['POST'])

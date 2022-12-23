@@ -18,8 +18,16 @@
         <li class="list-group-item">{{code.code}}</li>
       {% endfor %}
     </ul>
+    <div class="navigation">
+      <ul class="pagination justify-content-center">
+        <li class="page-item"><a class="page-link" href="?page={{page_num-1}}">Previous</a></li>
+        <li class="page-item"><a class="page-link">{{page_num}}</a></li>
+        <li class="page-item"><a class="page-link" href="?page={{page_num+1}}">Next</a></li>
+      </ul>
+    </div>
       <input class="btn btn-primary" type="submit" name="linvite" value="Generate">
-  </form>
+  </div>
+</form>
 </div>
 
 {% endblock %}
