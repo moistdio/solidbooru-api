@@ -1,2 +1,2 @@
-# school-media-management
+# solidbooru-api
 WIP
