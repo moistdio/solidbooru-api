@@ -15,7 +15,8 @@ user_bp = Blueprint('user_bp', __name__)
 @login_required
 @check_member
 def home():
-    return render_template("home.html")
+    uuid = request.args.get('uuid')
+    return render_template("home.html", uuid=uuid)
 
 
 @user_bp.route('/invite', methods=['GET'])

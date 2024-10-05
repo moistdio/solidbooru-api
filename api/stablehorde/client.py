@@ -2,7 +2,6 @@ import time
 from typing import Optional
 import aiohttp
 import msgspec
-from loguru import logger
 
 from . import errors, models
 
@@ -41,11 +40,18 @@ class StableHordeAPI:
         if not isinstance(payload, dict):
             payload = payload.to_dict()
 
+        # Ensure that nested objects are also converted to dictionaries
+        if 'params' in payload and isinstance(payload['params'], models.ModelGenerationInputStable):
+            payload['params'] = payload['params'].to_dict()
+
         response = await self._request(
             self.api+'/generate/async', "POST", payload, {
                 'apikey': self.api_key
             }
         )
+        # Needs to be catched.
+        # print(await response.content.read())
+
         return msgspec.json.decode(
             (await response.content.read()),
             type=models.RequestAsync
@@ -53,12 +59,10 @@ class StableHordeAPI:
 
     async def generate_from_txt(
         self,
-        image_gen,
-        payload: models.GenerationInput | dict | str,
-        filename: str | None = f"{int(time.time())}"
+        uuid: str
     ) -> dict:
         """Full method to generate images and save them in a file"""
-        img_status = await self.generate_status(image_gen.id)
+        img_status = await self.generate_status(uuid)
 
         return {"img_status": img_status}
 
@@ -99,3 +103,12 @@ class StableHordeAPI:
             (await response.content.read()),
             type=models.RequestStatusStable
         )
+    
+    async def close(self):
+        await self._session.close()
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self.close()

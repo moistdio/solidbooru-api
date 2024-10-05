@@ -3,11 +3,125 @@
 {% block content %}
 
 {% with messages = get_flashed_messages() %}
-    {% if messages %}
-      <div class="alert alert-warning">
-          {{ messages[0] }}</a>.
-      </div>
-    {% endif %}
+{% if messages %}
+<div class="alert alert-warning" id="flash-message">
+  {{ messages[0] }}
+</div>
+{% else %}
+<div class="alert alert-warning d-none" id="flash-message">
+  No image could be found.
+</div>
+{% endif %}
 {% endwith %}
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-9 d-flex flex-column align-items-center justify-content-center min-vh-100">
+      <div class="image-container position-relative mb-4">
+        <img id="dynamic-image" src="https://via.placeholder.com/1024" alt="Sample Image" class="img-fluid" style="max-height: 75vh;">
+        <div class="wait-time-box position-absolute top-0 start-50 translate-middle-x bg-white p-2 rounded shadow">
+          <p id="wait-time" class="mb-0">Estimated wait time: <span id="wait-time-value">N/A</span></p>
+        </div>
+      </div>
+      <div class="text-box-container">
+        <form action="/api/image/generate" method="post" class="w-100" style="max-width: 400px;">
+          <div class="form-group">
+            <label for="prompt">Enter your text:</label>
+            <input type="text" id="prompt" name="prompt" class="form-control" required>
+          </div>
+          <button type="submit" class="btn btn-primary mt-3">Submit</button>
+        </form>
+      </div>
+    </div>
+    <!-- Sidebar -->
+    <div class="col-md-3 collapse d-md-block bg-light border-left shadow-lg p-3 position-fixed top-0 end-0" id="sidebar" style="height: 100vh; z-index: 1050;">
+      <div class="sidebar-header border-bottom mb-3 pb-2">
+        <h5 class="text-primary">Image Details</h5>
+      </div>
+      <div class="sidebar-content">
+        <p><strong>ID:</strong> <span id="image-id" class="text-secondary">N/A</span></p>
+        <p><strong>Prompt:</strong> <span id="image-prompt" class="text-secondary">N/A</span></p>
+        <p><strong>Seed:</strong> <span id="image-seed" class="text-secondary">N/A</span></p>
+        <p><strong>Status:</strong> <span id="image-status" class="text-secondary">N/A</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toggle Button for Sidebar -->
+<button class="btn btn-info d-md-none position-fixed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar" aria-expanded="false" aria-controls="sidebar" style="bottom: 10px; right: 10px; z-index: 1060;">
+  Show Information
+</button>
+
+<script>
+  // Check if the UUID is present
+  const uuid = "{{ uuid }}";
+  let intervalPointer = null;
+
+  if (uuid !== "None") {
+    console.log("UUID is present:", uuid);
+    // Fetch image details and update the sidebar
+    fetchImageDetails(uuid);
+  }
+
+  async function fetchImageStatus() {
+    try {
+      const responseCheck = await fetch(`/api/image/check/?id=${uuid}`);
+      
+      if (!responseCheck.ok) {
+        // Show flash message
+        document.getElementById('flash-message').classList.remove('d-none');
+        clearInterval(intervalPointer);
+        return;
+      }
+
+      const dataCheck = await responseCheck.json();
+      document.getElementById('wait-time-value').textContent = `${dataCheck.wait_time} seconds`;
+
+      if (dataCheck.done) {
+        const responseImage = await fetch(`/api/image/get/?id=${uuid}`);
+        const responseData = await responseImage.json();
+
+        document.getElementById('wait-time').hidden = true; // Hide wait time box
+
+        document.getElementById('dynamic-image').src = responseData.url;
+        clearInterval(intervalPointer);
+
+        // Update sidebar with image details
+        updateSidebar(responseData);
+      }
+    } catch (error) {
+      console.error('Error fetching image status:', error);
+    }
+  }
+
+  async function fetchImageDetails(uuid) {
+    try {
+      const response = await fetch(`/api/image/get/?id=${uuid}`);
+      if (response.ok) {
+        const data = await response.json();
+        updateSidebar(data);
+      } else {
+        console.error('Error fetching image details:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error fetching image details:', error);
+    }
+  }
+
+  function updateSidebar(data) {
+    document.getElementById('image-id').textContent = data.uuid || 'N/A';
+    document.getElementById('image-prompt').textContent = data.prompt || 'N/A';
+    document.getElementById('image-seed').textContent = data.seed || 'N/A';
+    document.getElementById('image-status').textContent = data.done ? 'Done' : 'In Progress';
+  }
+
+  // Call the function to fetch image status if UUID is present
+  if (uuid !== "None") {
+    fetchImageStatus();
+    // Optionally, set an interval to periodically check for updates
+    intervalPointer = setInterval(fetchImageStatus, 5000); // Check every 5 seconds
+  }
+</script>
 
 {% endblock %}
