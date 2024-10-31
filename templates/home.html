@@ -16,18 +16,22 @@
 
 <div class="container-fluid">
   <div class="row">
-    <div class="col-md-9 d-flex flex-column align-items-center justify-content-center min-vh-100">
+    <div class="col-md-9 d-flex flex-column align-items-center justify-content-center" style="min-height: calc(100vh - 56px);">
       <div class="image-container position-relative mb-4">
-        <img id="dynamic-image" src="https://via.placeholder.com/1024" alt="Sample Image" class="img-fluid" style="max-height: 75vh;">
-        <div class="wait-time-box position-absolute top-0 start-50 translate-middle-x bg-white p-2 rounded shadow">
-          <p id="wait-time" class="mb-0">Estimated wait time: <span id="wait-time-value">N/A</span></p>
+        <img id="dynamic-image" src="" alt="Sample Image" class="img-fluid d-none" style="max-height: 75vh;">
+        <div id="loading-animation" class="d-none d-flex flex-column align-items-center justify-content-center position-absolute top-50 start-50 translate-middle bg-white p-4 rounded shadow">
+          <div class="progress" style="width: 100%; height: 30px;">
+            <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 0%;"></div>
+          </div>
+          <p id="wait-time" class="text-secondary mt-2"></p>
+          <p class="text-primary mt-2">Generating...</p>
         </div>
       </div>
       <div class="text-box-container">
-        <form action="/api/image/generate" method="post" class="w-100" style="max-width: 400px;">
+        <form id="generate-form" action="/api/image/generate" method="post" class="w-100" style="max-width: 400px;">
           <div class="form-group">
             <label for="prompt">Enter your text:</label>
-            <input type="text" id="prompt" name="prompt" class="form-control" required>
+            <textarea id="prompt" name="prompt" class="form-control" required style="min-height: 100px; min-width: 300px; resize: vertical;" oninput="autoResize(this)"></textarea>
           </div>
           <button type="submit" class="btn btn-primary mt-3">Submit</button>
         </form>
@@ -54,45 +58,79 @@
 </button>
 
 <script>
-  // Check if the UUID is present
-  const uuid = "{{ uuid }}";
-  let intervalPointer = null;
+  let totalWaitTime = 0;
 
-  if (uuid !== "None") {
-    console.log("UUID is present:", uuid);
-    // Fetch image details and update the sidebar
-    fetchImageDetails(uuid);
+  document.addEventListener('DOMContentLoaded', () => {
+    const uuid = "{{ uuid }}";
+    let intervalPointer = null;
+
+    if (uuid !== "None") {
+      toggleElement('loading-animation', true);
+      toggleElement('generate-form', false);
+      fetchImageDetails(uuid);
+      fetchImageStatus(uuid, intervalPointer);
+      intervalPointer = setInterval(() => fetchImageStatus(uuid, intervalPointer), 1000);
+    } else {
+      toggleElement('dynamic-image', false);
+    }
+  });
+
+  function toggleElement(id, show) {
+    const element = document.getElementById(id);
+    if (show) {
+      element.classList.remove('d-none');
+    } else {
+      element.classList.add('d-none');
+    }
   }
 
-  async function fetchImageStatus() {
+  async function fetchImageStatus(uuid, intervalPointer) {
     try {
       const responseCheck = await fetch(`/api/image/check/?id=${uuid}`);
-      
       if (!responseCheck.ok) {
-        // Show flash message
-        document.getElementById('flash-message').classList.remove('d-none');
+        toggleElement('flash-message', true);
         clearInterval(intervalPointer);
         return;
       }
 
       const dataCheck = await responseCheck.json();
-      document.getElementById('wait-time-value').textContent = `${dataCheck.wait_time} seconds`;
-
       if (dataCheck.done) {
         const responseImage = await fetch(`/api/image/get/?id=${uuid}`);
         const responseData = await responseImage.json();
-
-        document.getElementById('wait-time').hidden = true; // Hide wait time box
-
-        document.getElementById('dynamic-image').src = responseData.url;
+        toggleElement('loading-animation', false);
+        updateDynamicImage(responseData.url);
+        toggleElement('generate-form', true);
         clearInterval(intervalPointer);
-
-        // Update sidebar with image details
         updateSidebar(responseData);
+        updateFormPrompt(responseData.prompt);
+      } else {
+        updateWaitTime(dataCheck);
       }
     } catch (error) {
       console.error('Error fetching image status:', error);
     }
+  }
+
+  function updateDynamicImage(url) {
+    const dynamicImage = document.getElementById('dynamic-image');
+    dynamicImage.src = url;
+    toggleElement('dynamic-image', true);
+  }
+
+  function updateWaitTime(dataCheck) {
+    if (totalWaitTime === 0) {
+      totalWaitTime = dataCheck.wait_time;
+    }
+    const remainingTime = dataCheck.wait_time;
+    const percentage = ((totalWaitTime - remainingTime) / totalWaitTime) * 100;
+    updateProgressBar(percentage);
+    document.getElementById('wait-time').textContent = `Estimated wait time: ${remainingTime} seconds`;
+  }
+
+  function updateProgressBar(percentage) {
+    const progressBar = document.getElementById('progress-bar');
+    progressBar.style.width = `${percentage}%`;
+    progressBar.setAttribute('aria-valuenow', percentage);
   }
 
   async function fetchImageDetails(uuid) {
@@ -116,11 +154,15 @@
     document.getElementById('image-status').textContent = data.done ? 'Done' : 'In Progress';
   }
 
-  // Call the function to fetch image status if UUID is present
-  if (uuid !== "None") {
-    fetchImageStatus();
-    // Optionally, set an interval to periodically check for updates
-    intervalPointer = setInterval(fetchImageStatus, 5000); // Check every 5 seconds
+  function updateFormPrompt(prompt) {
+    const promptInput = document.getElementById('prompt');
+    promptInput.value = prompt;
+    autoResize(promptInput);
+  }
+
+  function autoResize(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
   }
 </script>
 
