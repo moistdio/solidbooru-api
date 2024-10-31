@@ -1,4 +1,5 @@
 import asyncio
+import os
 from flask import Flask, redirect, request, jsonify, Blueprint, url_for
 from api.stablehorde.client import StableHordeAPI
 from api.stablehorde.models import GenerationInput, ModelGenerationInputStable, ModelPayloadLorasStable
@@ -6,43 +7,59 @@ from db.models.models import Image, db
 
 api_bp = Blueprint('api_bp', __name__, url_prefix="/api")
 
-@api_bp.route('/image/generate', methods=['POST'])
-async def generate_image_route():
+# Load configuration from environment variables
+API_KEY = os.getenv("STABLE_HORDE_API_KEY", "EwZVK3w4rLZbzLGlnHBwNw")
+
+def get_json_data():
     if request.content_type.startswith('application/json'):
         try:
-            data = await request.get_json()
+            return request.get_json()
         except Exception as e:
-            return jsonify({"message": f"Invalid JSON data: {str(e)}"}), 400
+            return None, f"Invalid JSON data: {str(e)}"
     else:
-        data = request.form.to_dict()
+        return request.form.to_dict(), None
 
-    prompt = data.get('prompt')
-    if not prompt:
-        return jsonify({"message": "Prompt is required"}), 400
+def create_generation_input(prompt):
+    formated_prompt = f"score_9, score_8_up, score_7_up, BREAK, {prompt} ### score_1, score_2, score_3, text"
 
     params = ModelGenerationInputStable(
-        sampler_name="k_euler",
-        cfg_scale=1.0,
-        height=1024,
-        width=1024,
-        steps=8,
+        sampler_name="k_euler_a",
+        cfg_scale=3.5,
+        height=1344,
+        width=768,
+        steps=30,
+        clip_skip=2,
+        karras=True,
         loras=[
             ModelPayloadLorasStable(
-                name="790683",
+                name="850521",
+                clip=0.5
             ).to_dict()
         ],
         n=1
     )
 
-    generation_input = GenerationInput(
-        prompt=prompt,
+    return GenerationInput(
+        prompt=formated_prompt,
         params=params,
-        models=['Flux.1-Schnell fp8 (Compact)'],
+        models=['Pony Realism'],
         r2=True
     )
 
+@api_bp.route('/image/generate', methods=['POST'])
+async def generate_image_route():
+    data, error = get_json_data()
+    if error:
+        return jsonify({"message": error}), 400
+
+    prompt = data.get('prompt')
+    if not prompt:
+        return jsonify({"message": "Prompt is required"}), 400
+
+    generation_input = create_generation_input(prompt)
+
     try:
-        async with StableHordeAPI(api_key="EwZVK3w4rLZbzLGlnHBwNw") as stablehorde_client:
+        async with StableHordeAPI(api_key=API_KEY) as stablehorde_client:
             response_data = await stablehorde_client.txt2img_request(generation_input)
 
             if not response_data.id:
@@ -68,9 +85,12 @@ async def check_image_route():
     image = Image.query.filter_by(uuid=image_id).first()
     if not image:
         return jsonify({"message": "Image not found"}), 404
+    
+    if image.done:
+        return jsonify(image.to_dict()), 200
 
     try:
-        async with StableHordeAPI(api_key="EwZVK3w4rLZbzLGlnHBwNw") as stablehorde_client:
+        async with StableHordeAPI(api_key=API_KEY) as stablehorde_client:
             response_data = await stablehorde_client.generate_check(image_id)
             return jsonify(response_data.to_dict()), 200
     except Exception as e:
@@ -90,7 +110,7 @@ async def get_image_route():
         return jsonify(image.to_dict()), 200
 
     try:
-        async with StableHordeAPI(api_key="EwZVK3w4rLZbzLGlnHBwNw") as stablehorde_client:
+        async with StableHordeAPI(api_key=API_KEY) as stablehorde_client:
             response_data = await stablehorde_client.generate_from_txt(image_id)
 
             if not response_data['img_status'].done:
@@ -105,3 +125,4 @@ async def get_image_route():
             return jsonify(image.to_dict()), 200
     except Exception as e:
         return jsonify({"message": str(e)}), 400
+
